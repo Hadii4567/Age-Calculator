@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Royal Age Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@400;500&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F8F4E3; /* Light Cream */
+        }
+        .card {
+            background-color: #FFFFFF; /* White */
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            max-width: 800px;
+            width: 95%;
+        }
+        .title {
+            font-family: 'Playfair Display', serif;
+            color: #4A4A4A;
+        }
+        .input-group label {
+            color: #6C6C6C;
+        }
+        input[type="date"], input[type="text"] {
+            border: 1px solid #E5E7EB;
+            border-radius: 0.75rem;
+            transition: border-color 0.2s;
+            color: #4A4A4A;
+        }
+        input[type="date"]:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: #D4AF37; /* Light Gold */
+        }
+        .btn-calculate {
+            background-color: #D4AF37; /* Light Gold */
+            color: #FFFFFF;
+            font-weight: 600;
+            border-radius: 0.75rem;
+            transition: transform 0.2s, background-color 0.2s;
+        }
+        .btn-calculate:hover {
+            background-color: #C39D28;
+            transform: translateY(-2px);
+        }
+        .result-box {
+            background-color: #F8F8F8;
+            border-radius: 1rem;
+            border: 1px solid #E5E7EB;
+        }
+        .result-label {
+            color: #6C6C6C;
+        }
+        .result-value {
+            font-family: 'Playfair Display', serif;
+            color: #333333;
+        }
+        #liveTimer {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #D4AF37;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+    <div class="card p-8 md:p-12 text-center">
+        <h1 class="title text-4xl md:text-5xl font-bold mb-4">Age Calculator</h1>
+        <p class="text-gray-500 mb-8">Enter your details to find out your age and more.</p>
+
+        <div class="flex flex-col md:flex-row gap-6 mb-8">
+            <div class="input-group flex-1 text-left">
+                <label for="name" class="block mb-2 font-medium">Your Name</label>
+                <input type="text" id="name" placeholder="John Doe" class="w-full p-3 focus:ring-1 focus:ring-yellow-700">
+            </div>
+            <div class="input-group flex-1 text-left">
+                <label for="dob" class="block mb-2 font-medium">Date of Birth</label>
+                <input type="date" id="dob" class="w-full p-3 focus:ring-1 focus:ring-yellow-700">
+            </div>
+        </div>
+
+        <button id="calculateBtn" class="btn-calculate w-full md:w-auto px-10 py-3 text-lg mb-8">Calculate</button>
+
+        <div id="results" class="space-y-8 hidden">
+            <!-- Main Age Results -->
+            <div class="flex flex-col md:flex-row gap-6">
+                <div class="result-box flex-1 p-6">
+                    <div class="result-label text-sm mb-2">Age in Years</div>
+                    <div id="years" class="result-value text-3xl font-bold"></div>
+                </div>
+                <div class="result-box flex-1 p-6">
+                    <div class="result-label text-sm mb-2">Age in Months</div>
+                    <div id="months" class="result-value text-3xl font-bold"></div>
+                </div>
+                <div class="result-box flex-1 p-6">
+                    <div class="result-label text-sm mb-2">Age in Days</div>
+                    <div id="days" class="result-value text-3xl font-bold"></div>
+                </div>
+            </div>
+
+            <!-- Live Timer -->
+            <div class="result-box p-6">
+                <div class="result-label text-lg mb-2">Your Live Age</div>
+                <div id="liveTimer" class="font-mono"></div>
+            </div>
+
+            <!-- Celebrity Birthdays -->
+            <div class="result-box p-6">
+                <div class="result-label text-lg mb-2">Celebrities Born on This Day</div>
+                <div id="celebrityImageContainer" class="flex justify-center mb-4">
+                    <img id="celebrityImage" class="rounded-full w-24 h-24 object-cover hidden" alt="Celebrity">
+                </div>
+                <p id="celebrityName" class="font-bold text-xl text-gray-700"></p>
+                <p id="celebrityInfo" class="text-gray-500 text-sm"></p>
+                <p id="celebrity-loader" class="text-sm text-gray-400 hidden">Fetching celebrity birthdays...</p>
+            </div>
+
+            <!-- Personality Profile -->
+            <div class="result-box p-6">
+                <div class="result-label text-lg mb-2">Your Personality Profile ✨</div>
+                <p id="personality-profile-text" class="text-gray-700"></p>
+                <p id="personality-loader" class="text-sm text-gray-400 hidden">Generating personality profile...</p>
+            </div>
+
+            <!-- Fun Fact -->
+            <div class="result-box p-6">
+                <div class="result-label text-lg mb-2">A Fun Fact for You ✨</div>
+                <p id="fun-fact-text" class="text-gray-700"></p>
+                <p id="fun-fact-loader" class="text-sm text-gray-400 hidden">Fetching a fun fact...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // IMPORTANT: Replace 'YOUR_API_KEY_HERE' with your actual API key.
+        // Do not upload this key directly to a public GitHub repository.
+        const apiKey = 'AIzaSyBRcPak8nvWyp8vm1G_WY6bmLUyHbFhwO0';
+
+        const calculateBtn = document.getElementById('calculateBtn');
+        const dobInput = document.getElementById('dob');
+        const nameInput = document.getElementById('name');
+        const resultsDiv = document.getElementById('results');
+        const yearsSpan = document.getElementById('years');
+        const monthsSpan = document.getElementById('months');
+        const daysSpan = document.getElementById('days');
+        const liveTimerDiv = document.getElementById('liveTimer');
+        const celebrityInfoPara = document.getElementById('celebrityInfo');
+        const celebrityNamePara = document.getElementById('celebrityName');
+        const celebrityLoader = document.getElementById('celebrity-loader');
+        const celebrityImage = document.getElementById('celebrityImage');
+        const personalityProfileText = document.getElementById('personality-profile-text');
+        const personalityLoader = document.getElementById('personality-loader');
+        const funFactText = document.getElementById('fun-fact-text');
+        const funFactLoader = document.getElementById('fun-fact-loader');
+
+        let intervalId = null;
+
+        // Custom function to handle alerts with a modal
+        function showMessage(message) {
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000;';
+
+            const modalContent = document.createElement('div');
+            modalContent.style.cssText = 'background: white; padding: 2rem; border-radius: 1rem; text-align: center; max-width: 400px; width: 90%; box-shadow: 0 4px 6px rgba(0,0,0,0.1);';
+
+            const messageText = document.createElement('p');
+            messageText.textContent = message;
+            messageText.style.cssText = 'font-size: 1.125rem; margin-bottom: 1rem;';
+
+            const closeButton = document.createElement('button');
+            closeButton.textContent = 'OK';
+            closeButton.style.cssText = 'background: #D4AF37; color: white; padding: 0.5rem 1.5rem; border-radius: 0.5rem;';
+            closeButton.onclick = () => document.body.removeChild(modal);
+
+            modalContent.appendChild(messageText);
+            modalContent.appendChild(closeButton);
+            modal.appendChild(modalContent);
+            document.body.appendChild(modal);
+        }
+
+        // Live timer function
+        function startLiveTimer(birthDate) {
+            if (intervalId) {
+                clearInterval(intervalId);
+            }
+
+            intervalId = setInterval(() => {
+                const now = new Date();
+                const diff = now.getTime() - birthDate.getTime();
+                
+                const seconds = Math.floor(diff / 1000);
+                const minutes = Math.floor(seconds / 60);
+                const hours = Math.floor(minutes / 60);
+                const days = Math.floor(hours / 24);
+                
+                const years = Math.floor(days / 365.25);
+                const remainingDays = days - Math.floor(years * 365.25);
+                const months = Math.floor(remainingDays / 30.44);
+                const remainingDaysInMonth = Math.floor(remainingDays % 30.44);
+                
+                liveTimerDiv.textContent = 
+                    `${years} years, ${months} months, ${remainingDaysInMonth} days, ` +
+                    `${hours % 24} hours, ${minutes % 60} minutes, ${seconds % 60} seconds`;
+            }, 1000);
+        }
+
+        async function getCelebrityBirthdays(date) {
+            if (apiKey === 'YOUR_API_KEY_HERE') {
+                showMessage("API key is not set. Please add your key to the 'apiKey' variable in the code.");
+                return;
+            }
+
+            celebrityLoader.classList.remove('hidden');
+            celebrityNamePara.textContent = '';
+            celebrityInfoPara.textContent = '';
+            celebrityImage.classList.add('hidden');
+            
+            const month = date.toLocaleString('default', { month: 'long' });
+            const day = date.getDate();
+
+            try {
+                const promptText = `Find a single well-known celebrity born on ${month} ${day}. Provide their name and profession in the format: "[Name] is a [Profession]."`;
+
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{ text: promptText }]
+                        }]
+                    })
+                });
+
+                if (!response.ok) {
+                    console.error(`API response status: ${response.status}`);
+                    throw new Error('Network response was not ok');
+                }
+
+                const result = await response.json();
+                const textContent = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                
+                if (textContent) {
+                    const match = textContent.match(/^(.*?)\s+is a\s+(.*?)\./);
+                    if (match && match[1] && match[2]) {
+                        celebrityNamePara.textContent = match[1];
+                        celebrityInfoPara.textContent = match[2];
+                        celebrityImage.src = `https://placehold.co/96x96/E0E0E0/808080?text=CELEB`;
+                        celebrityImage.classList.remove('hidden');
+                    } else {
+                        celebrityNamePara.textContent = 'Unknown Celebrity';
+                        celebrityInfoPara.textContent = `No detailed information found.`;
+                    }
+                } else {
+                    celebrityNamePara.textContent = 'No Information Found';
+                    celebrityInfoPara.textContent = '';
+                }
+
+            } catch (error) {
+                console.error("Error fetching celebrity data:", error);
+                celebrityNamePara.textContent = 'Error';
+                celebrityInfoPara.textContent = 'Could not fetch celebrity information.';
+            } finally {
+                celebrityLoader.classList.add('hidden');
+            }
+        }
+
+        async function generatePersonalityProfile(date) {
+            if (apiKey === 'YOUR_API_KEY_HERE') {
+                showMessage("API key is not set. Please add your key to the 'apiKey' variable in the code.");
+                return;
+            }
+            personalityLoader.classList.remove('hidden');
+            personalityProfileText.textContent = '';
+
+            try {
+                const promptText = `Given the date of birth, ${date.toDateString()}, create a short, positive, and inspiring personality profile for someone. Focus on traits associated with that birth month or astrological sign. The tone should be friendly and encouraging.`;
+
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
+                });
+
+                const result = await response.json();
+                const textContent = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                personalityProfileText.textContent = textContent || 'Could not generate a personality profile.';
+            } catch (error) {
+                console.error("Error generating personality profile:", error);
+                personalityProfileText.textContent = 'Error: Could not generate a personality profile.';
+            } finally {
+                personalityLoader.classList.add('hidden');
+            }
+        }
+
+        async function generateFunFact(date) {
+            if (apiKey === 'YOUR_API_KEY_HERE') {
+                showMessage("API key is not set. Please add your key to the 'apiKey' variable in the code.");
+                return;
+            }
+            funFactLoader.classList.remove('hidden');
+            funFactText.textContent = '';
+
+            try {
+                const promptText = `Provide a unique, interesting, and lesser-known historical or cultural fact related to the date ${date.toDateString()}.`;
+
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
+                });
+
+                const result = await response.json();
+                const textContent = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                
+                funFactText.textContent = textContent || 'Could not find a fun fact.';
+            } catch (error) {
+                console.error("Error generating fun fact:", error);
+                funFactText.textContent = 'Error: Could not find a fun fact.';
+            } finally {
+                funFactLoader.classList.add('hidden');
+            }
+        }
+
+        calculateBtn.addEventListener('click', async () => {
+            const dob = dobInput.value;
+            const name = nameInput.value;
+
+            if (!dob) {
+                showMessage("Please enter your date of birth.");
+                return;
+            }
+
+            const birthDate = new Date(dob);
+            const today = new Date();
+
+            if (birthDate > today) {
+                showMessage("The date of birth cannot be in the future.");
+                return;
+            }
+
+            // Calculate age in years, months, days
+            let years = today.getFullYear() - birthDate.getFullYear();
+            let months = today.getMonth() - birthDate.getMonth();
+            let days = today.getDate() - birthDate.getDate();
+
+            if (days < 0) {
+                months--;
+                const lastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+                days += lastMonth.getDate();
+            }
+
+            if (months < 0) {
+                years--;
+                months += 12;
+            }
+
+            yearsSpan.textContent = years;
+            monthsSpan.textContent = months;
+            daysSpan.textContent = days;
+
+            resultsDiv.classList.remove('hidden');
+
+            startLiveTimer(birthDate);
+            // Calling the Gemini-powered functions
+            await getCelebrityBirthdays(birthDate);
+            await generatePersonalityProfile(birthDate);
+            await generateFunFact(birthDate);
+        });
+    </script>
+</body>
+</html>
